@@ -1,0 +1,22 @@
+When we open or create a file with the standard I/O library, we say that
+we have associated a stream with the file.
+
+When we open a stream, the standard I/O function fopen() returns a pointer
+to a FILE object. This object is normally a structure that contains all the
+information required by the standard I/O library to manage the stream: the
+file descriptor used for actual I/O, a pointer to a buffer for the stream,
+the size of the buffer, a count of the number of characters currently in
+the buffer, an error flag, and the like.
+
+Application software should never need to examine a FILE object. To
+reference the stream, we pass its FILE pointer as an argument to each
+standard I/O function.
+
+Standard Input, Standard Output, and Standard Error
+Three streams are predefined and automatically available to a process:
+standard input, standard output, and standard error. These streams refer to
+the same file descriptors STDIN_FILENO, STDOUT_FILENO, and STDERR_FILENO.
+
+These three standard I/O streams are referenced through the predefined file
+pointers stdin, stdout, and stderr. The file pointers are defined in the
+file <stdio.h> header.

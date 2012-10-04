@@ -1,0 +1,27 @@
+As we described in Section 7.3, a process can terminate normally in five ways:
+1. Executing a return from the main() function.
+2. Calling the exit() function. 注意, atexit(), closing all stardard I/O streams.
+3. Calling the _exit() and _Exit() function.
+4. Executing a return from the start routine of the last thread in the process. The return value of the thread is not used as the return value of the process, however. When the last thread returns from its start routine, the process exits with a termination status of 0.
+5. Calling the pthread_exit() function from the last thread in the process. As with the previous case, the exit status of the process in this situation is always 0.
+
+The three forms of abnormal termination are as follows:
+1. Calling about(). 这个会生成一个 SIGABRG 信号
+2. When the process receives certain signals.
+3. The last thread responds to a cancellation request.
+
+NOTE!!!
+Regardless of how a process terminates, the same code in the kernel is eventually executed. This kernel code closes all the open descriptors for the process, releases the memory that it was using, and the like.
+
+For any of the preceding cases, we want the terminating process to be able to notify its parent how it terminated. For the three exit functions (exit, _exit, and _Exit), this is done by passing an exit status as the argument to the function. In the case of an abnormal termination, however, the kernel, not the process, generates a termination status to indicate the reason for the abnormal termination. In any case, the parent of the process can obtain the termination status from either from the wait() or waitpid() function.
+Note that we differentiate between the exit status, which is the argument to one of the three exit function or the return value from main(), and the termination status. The exit status is converted into a termination status by the kernel when _exit() is finally called.
+
+下面描述了父进程和子进程结束前后的几种情况:
+1. 当 父进程 早于 子进程 结束时:
+What happens if the parent terminates before the child? The answer is that the init process becomes the parent process of any process whose terminates. We say that the process has been inherited by init. What normally happens is that whenever a process terminates, the kernel goes through all active processes to see whether the terminating process is the parent of any process that still exits. If so, the parent process ID of the surviving process is changed to be 1 (the process ID of init). This way, we're guaranteed that every process has a parent.
+
+2. 当 子进程 早于 父进程 结束时:
+Another condition we have to warry about is when a child terminates before its parent. If the child completely disappeared, the parent wouldn't be able to fetch its termination status when and if the parent was finally read to check if the child had terminated. The kernel keeps a small amount of information for every terminating process, so that the information is available when the parent of the terniating process calls wait() or waitpid(). Minimally, this information consists of the process ID, the termination status of the process, and the amount of CPU time taken by the process. The kernel can discard all the memory used by the process and close its open files. In UNIX system terminology, a process that has terminated, but whose parent has not yet waited for it, is called a zombie. 
+
+3. 被过继给 init 的进程终止是会发生什么?
+The finl condition to consider is this: what happens when a process that has been inherited by init terminates? Does it become a zombie? The answer is "no", because init is written so that whenever one of its children terminates, init calls one of the wait functions to fetch the termination status. By doint this, init prevents the system from being clogged by zombies. When we say "one of init's children", we mean either a process that init generates directly (such as getty) or a process whose parent has terminated and has been subsequently inherited by init.

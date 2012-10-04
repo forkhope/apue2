@@ -1,0 +1,9 @@
+file status flag = 8001
+O_ACCMODE = 3
+O_RDONLY = 0
+O_WRONLY = 1
+O_RDWR = 2
+O_APPEND = 400
+O_SYNC = 1000
+write only
+fcntl-fl: unknown access mode

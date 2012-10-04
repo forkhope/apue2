@@ -1,0 +1,70 @@
+#include <sys/stat.h>
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+/* int lstat(const char *path, struct stat *buf);
+ * The lstat() function is similar to stat(), but when the named file is a
+ * symbolic link, lstat() function returns information about the symbolic
+ * link, not the file referenced by the symbolic link.
+ * 
+ * The size of a symlink is the length of the pathname it contains, without
+ * a trailing null byte.
+ */
+int main(int argc, char *argv[])
+{
+	struct stat sb;
+
+	if (argc != 2) {
+		fprintf(stderr, "Usage: %s <pathname>\n", argv[0]);
+		exit(EXIT_FAILURE);
+	}
+
+	if (lstat(argv[1], &sb) < 0) {
+		perror("stat");
+		exit(EXIT_FAILURE);
+	}
+
+	printf("File Type:                  ");
+	switch (sb.st_mode & S_IFMT) {
+		case S_IFBLK:
+			printf("block device\n");
+			break;
+		case S_IFCHR:
+			printf("character device\n");
+			break;
+		case S_IFDIR:
+			printf("directory\n");
+			break;
+		case S_IFIFO:
+			printf("FIFO/pipe\n");
+			break;
+		case S_IFLNK:
+			printf("symbolic link\n");
+			break;
+		case S_IFREG:
+			printf("regular file\n");
+			break;
+		case S_IFSOCK:
+			printf("socket\n");
+			break;
+		default:
+			printf("unknown\n");
+			break;
+	}
+
+	printf("I-node number:              %ld\n", (long)sb.st_ino);
+	printf("Mode:                       %lo (octal)\n",
+			(unsigned long)sb.st_mode);
+	printf("Link count:                 %ld\n", (long)sb.st_nlink);
+	printf("Ownership:                  UID=%ld    GID=%ld\n",
+			(long)sb.st_uid, (long)sb.st_gid);
+	printf("Preferred I/O block size:   %lld\n", (long long)sb.st_blksize);
+	printf("FILE size:                  %lld\n", (long long)sb.st_size);
+	printf("Blocks:                     %ld\n", (long)sb.st_blocks);
+	printf("Last status change:         %s", ctime(&sb.st_ctime));
+	printf("Last file access:           %s", ctime(&sb.st_atime));
+	printf("Last modification:          %s", ctime(&sb.st_mtime));
+
+	exit(EXIT_SUCCESS);
+}

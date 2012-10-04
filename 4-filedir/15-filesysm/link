@@ -1,0 +1,114 @@
+下面的英文出自书中第 4.14 小节 -- File Systems
+1. We show two directory entries that point to the same i-node entry. Every
+   i-node has a link count that contains the number of directory entries
+   that point to the i-node. Only when the link count goes to 0 can the file
+   be deleted (i.e., can the data blocks associated with the file be
+   released). This is why the operation of "unlinking a file" does not
+   always mean "deleting the blocks associated with the file." This is why
+   the function that removes a directory entry is called unlink(), not
+   delete. In the stat structure, the link count is contained in the
+   st_nlink member. Its primitive system data type is nlink_t. These types
+   of link are called hard links.
+2. The other type of link is called a symbolic link. With a symbolic link,
+   The actual contents of the file--the data blocks--store the name of the
+   file that the symbolic link points to. In the following example, the
+   filename in the directory entry is the three-character string lib and
+   the 7 bytes of data in the file are
+   		usr/lib:
+			lrwxrwxrwx 1 root	7 Sep 25 07:14 lib -> usr/lib
+   The file type in the i-node woulde be S_IFLINK so that the system knows
+   that this is a symbolic link.
+
+硬链接(hard link) 和 符号链接(symbolic link) 的区别:
+1.硬链接文件的 i-node 指向的数据块(data block)里面存放的就是真实的文件内容,
+  且和它所链接的文件的 i-node 指向的数据块是同一个数据块.书中的 Figure 4.14
+  画出了这种情况.
+  符号链接文件的 i-node 指向的数据块里面存放的是它所链接的文件名,如上述的
+  第二点所描述的那样.
+2.硬链接: 在磁盘上有一份内容一样的文件产生,但不改变其i-node,也就是与
+  原文件共用 i-node.硬链接和原文件的目录项中保存的i-node number 都对应
+  i-node array 中的同一个 i-node 元素.
+  符号链接: 不在磁盘上有一份内容一样的文件产生,但产生新的i-node.符号链接
+  和原文件的目录项中保存的 i-node number 是不同的值,分别对应 i-node array
+  中的两个 i-node 元素.这是显而易见的,因为符号链接指向的数据块和原文件指向
+  的数据块中的内容并不相同.
+  另外,复制一个文件,会产生新的文件内容,并且使用新的 i-node,即复制后的文件和
+  原文件的数据块是不同的数据块,虽然它们的内容是一样的,由于数据块不同,指向这
+  些数据块的 i-node 也随之不同.
+3.硬链接会增加 i-node 的链接数目(link count),而符号链接不会.因为硬链接是
+  链接到同一个 i-node,而符号链接是生成一个新的 i-node,不会对原文件的 i-node
+  产生影响.
+4.硬链接文件的文件类型和原文件的文件类型一样,因为文件类型是保存在 i-node
+  里面的,而应链接文件和原文件共用 i-node,两者在大部分文件信息上都是一样的.
+  符号链接文件的文件类型是: symbolic link,其对应的宏为 S_IFLINK.
+
+在当前目录下,新建一个文件 tian, 执行 ls -il 得到的结果如下:
+lixianyi@lixianyi:~/program/apue2/4-filedir/15-filesysm$ ls -il
+总用量 8
+2925214 -rw-r--r-- 1 lixianyi lixianyi 2741  5月 13 13:19 link
+2925212 -rw-r--r-- 1 lixianyi lixianyi    8  5月 13 13:20 tian
+
+然后执行 ln tian hlink-tian 命令创建一个链接到 tian 的硬链接文件 hlink-tian 
+再执行 ls -il 命令得到的结果如下:
+lixianyi@lixianyi:~/program/apue2/4-filedir/15-filesysm$ ls -il
+总用量 12
+2925212 -rw-r--r-- 2 lixianyi lixianyi    8  5月 13 13:20 hlink-tian
+2925214 -rw-r--r-- 1 lixianyi lixianyi 2741  5月 13 13:19 link
+2925212 -rw-r--r-- 2 lixianyi lixianyi    8  5月 13 13:20 tian
+
+可以看到 hlink-tian 和 tian 的 i-node 都是 2925212,是同一个 i-node, 且该
+i-node 的链接数目变为了2(在第一次执行ls -il命令时, tian 的链接数目是 1).
+
+接着执行 ln -s tian slink-tian 命令创建一个链接到 tian 的符号链接文件
+slink-tian, 再执行 ls -il 命令得到的结果如下:
+lixianyi@lixianyi:~/program/apue2/4-filedir/15-filesysm$ ls -il
+总用量 12
+2925212 -rw-r--r-- 2 lixianyi lixianyi    8  5月 13 13:20 hlink-tian
+2925213 -rw-r--r-- 1 lixianyi lixianyi 3455  5月 13 13:27 link
+2925214 lrwxrwxrwx 1 lixianyi lixianyi    4  5月 13 13:31 slink-tian -> tian
+2925212 -rw-r--r-- 2 lixianyi lixianyi    8  5月 13 13:20 tian
+
+可以看到, slink-tian 的 i-node 是 2925214, 不同于 tian 的 2925212.
+slink-tian 的文件大小是 4,对应"tian"这4个字符(这里不包含'\0'字符).且这两个
+文件的文件属性也不一样,而 hlink-tian 和 tian 的文件属性是一样的.
+
+执行 cp tian tianxia 命令得到 tian 的一个复制文件 tianxia,再执行 ls -il:
+lixianyi@lixianyi:~/program/apue2/4-filedir/15-filesysm$ ls -il
+总用量 20
+2925212 -rw-r--r-- 2 lixianyi lixianyi    8  5月 13 13:20 hlink-tian
+2925216 -rw-r--r-- 1 lixianyi lixianyi 4130  5月 13 13:32 link
+2925214 lrwxrwxrwx 1 lixianyi lixianyi    4  5月 13 13:31 slink-tian -> tian
+2925212 -rw-r--r-- 2 lixianyi lixianyi    8  5月 13 13:20 tian
+2925213 -rw-r--r-- 1 lixianyi lixianyi    8  5月 13 13:39 tianxia
+
+可以看到, tianxia 的 i-node 是 2925213, 不同于 tian 的 2925212.(对比上面的
+结果, 2925213 本来是 link 的 i-node,这里却变成了tianxia 的 i-node, link的
+i-node 变成了 2925216).
+同样, tianxia 的链接数目也是 1,不同于 tian 的 2.虽然它们的文件属性是一样的,
+但是如果使用 chmod 命令修改 tian 的文件属性,则 hlink-tian的文件属性也会变:
+lixianyi@lixianyi:~/program/apue2/4-filedir/15-filesysm$ chmod a+w tian
+lixianyi@lixianyi:~/program/apue2/4-filedir/15-filesysm$ ls -il
+总用量 20
+2925212 -rw-rw-rw- 2 lixianyi lixianyi    8  5月 13 13:20 hlink-tian
+2925216 -rw-r--r-- 1 lixianyi lixianyi 4130  5月 13 13:32 link
+2925214 lrwxrwxrwx 1 lixianyi lixianyi    4  5月 13 13:31 slink-tian -> tian
+2925212 -rw-rw-rw- 2 lixianyi lixianyi    8  5月 13 13:20 tian
+2925213 -rw-r--r-- 1 lixianyi lixianyi    8  5月 13 13:39 tianxia
+
+tian 和 hlink-tian 的属性都变成了 -rw-rw-rw-,但是 tianxia 的属性没有变.两者
+并没有相互的影响关系.同样 使用 chmod 命令修改 tianxia 的属性,不会影响tian:
+lixianyi@lixianyi:~/program/apue2/4-filedir/15-filesysm$ chmod a+x tianxia
+lixianyi@lixianyi:~/program/apue2/4-filedir/15-filesysm$ ls -il
+总用量 20
+2925212 -rw-rw-rw- 2 lixianyi lixianyi    8  5月 13 13:20 hlink-tian
+2925216 -rw-r--r-- 1 lixianyi lixianyi 4130  5月 13 13:32 link
+2925214 lrwxrwxrwx 1 lixianyi lixianyi    4  5月 13 13:31 slink-tian -> tian
+2925212 -rw-rw-rw- 2 lixianyi lixianyi    8  5月 13 13:20 tian
+2925213 -rwxr-xr-x 1 lixianyi lixianyi    8  5月 13 13:39 tianxia
+
+tianxia 的属性变为 -rwxr-xr-x,而 tian 和 hlink-tian 的属性依然是 -rw-rw-rw-
+
+使用 file 命令查看 tian, hlink-tian, slink-tian 三个文件的类型如下:
+tian:       ASCII text
+hlink-tian: ASCII text
+slink-tian: symbolic link to `tian'

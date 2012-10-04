@@ -1,0 +1,5 @@
+Tditional implementations of the UNIX System have a buffer cache or page 
+cache in the kernel through which most disk I/O passes. When we write data 
+to a file, the data is normally copied by the kernel into one of its buffers
+and queued for writing to disk at some later time. This is called delayed 
+write. 可参见书中 3.13 小节查看更多信息.

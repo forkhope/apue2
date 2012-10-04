@@ -1,0 +1,21 @@
+Newer systems provide a directory named /dev/fd whose entries are files
+named 0, 1, 2, and so on, Opening the file /dev/fd/n is equivalent to
+duplicating descriptor n, assuming that descriptor n is open.
+It is not part of POSIX.1.
+
+In the function call
+	fd = open("/dev/fd/0", mode);
+most systems ignore the specified mode, whereas others(指除了most systems
+之外的systems) require that it be a subset of the mode used when the
+reference file (standard input, in this case) was originally opened.
+Because the previous open() is equivalent to
+	fd = dup(0);
+the descriptor 0 and fd share the same file table entry. For example, if
+descriptor 0 was opened read-only, we can only read on fd. Even if the
+system ignores the open mode, and the call
+	fd = open("/dev/fd/0", O_RDWR);
+succeeds, we still can't write to fd.
+
+The main use of the /dev/fd files is from the shell. It allows programs
+that use pathname arguments to handle standard input and standard output
+in the same manner as other pathnames.

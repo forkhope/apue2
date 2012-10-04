@@ -1,0 +1,47 @@
+We can set the real user ID and effective user ID with the setuid() function. Similarly, we can set the real group ID and the effective group ID with the setgid() function.
+#include <unistd.h>
+int setuid(uid_t uid);
+int setgid(gid_t gid);
+	Both return: 0 if OK, -1 on error.
+
+There are rules for who can change the IDs. Let's consider only the user ID for now. (Everything we describe for the user ID also applies to the group ID).
+1. If the process has superuser privileges, the setuid() function sets the real user ID, effective user ID, and saved set-user-ID to uid.
+2. If the process does not have superuser privileges, but uid equals either the real user ID or the saved set-user-ID, setuid() sets only the effective user ID to uid. The real user ID and the saved set-user-ID are not changed.
+3. If neither of these two conditions is true, errno is set to EPERM, and -1 is returned.
+
+We can make a few statements about the three user IDs that the kernel maintains.
+1. Only a superuser process can change the real user ID.
+2. The effective user ID is set by the exec functions only if the set-user-ID bit is set for the program file. If the set-user-ID bit is not set, the exec functions leave the effective user ID as its current value. We can call setuid() at any time to set the effective user ID to either the real user ID or the saved set-user-ID. Naturally, we can't set the effective user ID to any random value.
+3. The saved set-user-ID is copied from the effective user ID by exec(). If the file's set-user-ID bit is set, this copy is saved after exec stores the effective user ID from the file's user ID.
+
+
+POSIX.1 includes the two functions seteuid() and setegid(). These functions are similar to setuid() and setgid(), but only the effective user ID or effective groupd ID is changed.
+#include <unistd.h>
+int seteuid(uid_t uid);
+int setegid(gid_t gid);
+	Both return: 0 if OK, -1 on error.
+
+An unprivileged user can set its effective user ID to either its real user ID or its saved set-user-ID. For a privileged user, only the effective user ID is set to uid. (This differs from the setuid() function, which changes all three user IDs.)
+
+
+Group IDs
+Everything that we've said so far in this section also applies in a similar fashion to group IDs. The supplementary group IDs are not affected by getgid(), setrgid(), or setegid().
+
+
+saved set-user ID 和 set-user-ID 的区别:
+1. saved set-user ID 是一个进程的ID属性,相当于是动态属性,当进程运行的时候,才存在 saved set-user ID 这个值.
+   而 set-user-ID 是一个文件本身的属性,其值存在文件对应的i-node中,相当于是静态属性.
+
+2. 书中4.4小节提到: The saved set-user-ID and saved set-group-ID contain copies of the effective user ID and the effective group ID when a program is executed. 另外, 8.11小节提到: The saved set-user-ID is copied from the effective user ID by exec. If the file's set-user-ID bit is set, this copy is saved after exec stores the effective user ID from the file's user ID.
+即, 当执行 exec 函数时, save set-user-ID的值被复制为effective user ID的值.如果一个可执行文件设置了 set user ID 位,则exec 函数会先将 effective user ID 的值设为该文件的用户ID(user ID),然后再将设置之后的effective user ID的值复制给 saved set-user-ID.
+
+3. 可以使用 stat() 函数获取一个文件的属性,假设stat() 函数的值存在buf结构体变量中,则如果 buf.st_mode & S_ISUID 的值为真,则该文件设置了set user ID 位,否则没有设置 set user ID位. 可以通过 chmod() 函数来设置一个文件的 set user ID位.
+
+4. 目前没有知道可以获取 saved set-user-ID 的方法,书中 8.11 小节提到: Note that we can obtain only the current value of the real user ID and the effective user ID with the functions getuid() and geteuid() from section 8.2. We can't obtain the current value of the saved set-user-ID.
+当执行exec函数时,saved set-user-ID会被复制为 effective user ID的值.拥有超级用户(superuser)权限的进程在执行setuid()函数时,saved set-user-ID会被赋以传入的id值.不拥有超级用户权限的进程执行setuid()函数仅能改变effective user ID的值,进程的real user ID 和 saved set-user-ID 的值保持不变.
+
+
+saved set-user-ID 和 effective user ID 的关系
+1. saved set-user-ID 的初值就是复制自 effective user ID 的值.
+2. 不拥有超级用户权限的进程在调用 setuid() 函数时,传入的uid值应该等于进程的real user ID 或者 saved set-user-ID 的值才能设置成功,且只会将effective user ID的值设置为传入的uid的值, real user ID 和 saved set-uesr-ID 的值不变.
+3. 拥有超级用户权限的进程调用 setuid() 时,会同时设置 real user ID, saved set-user-ID, 和 effective user ID 的值为传入的 uid 的值.

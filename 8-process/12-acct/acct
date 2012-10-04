@@ -1,0 +1,21 @@
+Most UNIX systems provide an option to do process accounting. When enabled,
+the kernel writes an accounting record each time a process terminates. These
+accounting records are typically a small amount of binary data with the
+name of the command, the amount of CPU time used, the user ID and group ID,
+the starting time, and so on.
+
+A function we haven't described (acct()) enables and disables process
+accounting.
+
+The structure of the accounting records is defined in the header
+</sys/acct.h>
+
+Each accounting record is written when the process terminates. This means
+that the order of the record in the accounting file corresponds to the
+termination order of the processes, not the order in which they were
+started.
+
+The accounting records correspond to processes, not programs. A new record
+is initialized by the kernel for the child after a fork(), not when a new
+program is executed. Although exec() doesn't create a new accounting record,
+the command name changes, and the AFORK flag is cleared.

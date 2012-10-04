@@ -1,0 +1,111 @@
+Sessions and process groups have a few other characteristics.
+1. A session can have a single controlling terminal. The is usually the
+terminal device (in the case of a terminal login) or pseudo-terminal device
+(in case of a network login) on which we log in.
+2. The session leader that establishes the connection to the controlling
+terminal is called the controlling process.
+3. The process groups within a session can be divided into a single
+foreground process group and one or more background process groups.
+4. If a session has a controlling terminal, it has a single foreground
+process group, and all other process groups in the session are background
+process groups.
+5. Whenever we type the terminal's interrupt key (Control-C), this causes
+the interrupt signal be sent to all processes in the foreground process
+group.
+6. Whenever we type the terminal's quit key (ofter Control-backslash), this
+causes the quit signal to be sent to all processes in the foreground
+process group.
+7. If a modem (or network) disconnect is detected by the terminal interface,
+the hang-up signal is sent to the controlling process (the session leader).
+
+Usually, we don't have to worry about the controlling terminal; it is
+established automatically when we log in.
+
+POSIX.1没有指定为session分配controlling terminal的方式,不同的操作系统拥有
+各自的实现,书中9.6小节对此作了描述.
+
+There are times when a program wants to talk to the controlling terminal,
+regardless of whether the standard input or standard output is redirected.
+The way a program guarantees that it is talking to the controlling terminal
+is to open() the file /dev/tty. This special file is a synonym within the
+kernel for the controlling terminal. Naturally, if the program doesn't have
+a controlling terminal, the open() of this device will fail.
+
+根据APUE2书中 9.8 小节的Figure 9.8得到如下的流程:
+1.getty(通过terminal login时) 或者 telnetd(通过network login时)执行setsid()
+函数,创建一个新的会话,然后将控制终端和这个会话关联起来,然后exec login程序
+2.login程序执行一些初始化操作后,exec login shell.用户通过这个shell来对操作
+系统下指令.此时,这个shell是刚才所创建会话的组长,也是所创建进程组的组长.
+3.用户在这个shell上执行一个工作(job),这些工作可以是前台工作,也可以是后台工
+作.一个工作应该就对应一个进程组.
+
+至此,我们得到了一个会话,这个会话在执行着一个shell程序,这个shell程序读取我们
+通过控制终端输入的命令,解析这些命令,将解析结果输出到控制终端上,呈现在我们
+面前.我们在这个shell上可以执行一个或者多个工作,这些工作对应各自的进程组.
+
+对于 进程, 进程组, 会话, 控制终端 的关系,简单来说是:
+一个进程属于某个进程组,该进程组属于某个会话,该会话可能有一个控制终端,也可能
+没有.如果该会话拥有一个控制终端,那么该控制终端知道这个会话的前台进程组的组
+长ID.这个ID值可以通过tcsetpgrp()函数来设置.
+
+进程(process),进程组(process group),进程组组长(process group leader)的关系:
+1.每一个进程都会属于某个进程组. Each process belongs to a process group.
+执行fork()函数后,子进程会继承父进程的进程组ID,从而隶属于父进程所在的进程组.
+2.一个进程组是指一个或者多个进程的集合,这些进程通常关联着同一个工作(job).
+每个进程组的进程组ID是独一无二的,其对应的数据类型也是pid_t,和进程ID的一样.
+3.同一个进程组中的多个进程可以同时接收到发送给该进程组的信号(signal).
+4.每个进程组有一个进程组组长.进程组组长就是进程组中的某个进程,该进程的进程
+ID (process ID)等于这个进程组的进程组ID (process group ID).
+即,要判断一个进程是否是进程组组长,就判断这个进程的进程ID是否等于该进程组的
+进程组ID.可以使用getpgrp()函数获取到当前进程所在的进程组ID.
+5.一个进程组的进程组组长终止(terminal)之后,这个进程组还有可能存在.一个进程组
+的存在周期是从它被创建到组内最后一个进程离开这个组为止.
+6.一个进程可以调用setpgid()函数加入一个已存在的进程组.此时,传给setpgid()函
+数的两个参数应该不相等,因为当这两个参数相等时,相当于创建一个新的进程组.
+7.一个进程可以调用setpgid()函数或者setsid()函数创建一个新的进程组.
+调用setpgid()函数创建新进程组时,传入的两个参数应该相等;此时,新进程组的进程
+组ID就等于当前进程的进程ID.
+调用setsid()函数会创建一个新进程组,该函数的返回值就是新进程组的进程组ID,且
+这个ID也正是当前进程的进程ID.即,当前进程是所新创建进程组的进程组组长.
+8.一个进程只能设置它自己或者它的子进程的进程组ID.如果它的子进程调用已经调用
+了exec函数,那么此时父进程也不能再设置这个子进程的进程组ID.
+
+会话(session),进程(process),进程组(process group)的关系:
+1.一个会话是一个或者多个进程组的集合.
+2.如果一个会话拥有一个控制终端(controlling terminal),那么该会话有且只有一个
+前台进程组(foreground process group);此时,该会话中的其他进程组都属于后台进
+程组(background process group).当然,该会话也可能没有后台进程组.
+3.一个不是进程组组长的进程可以调用setsid()函数创建一个新的会话.此时,这个进程
+是新会话的会话组长(session leader),且该会话当前只有这个进程;创建新会话时,也
+会创建一个新进程组,该进程是该进程组的组长,进程组的ID就是该进程的进程ID.
+4.如果某个进程是其所在进程组的组长,则该进程调用setsid()函数创建新会话会报错.
+
+会话(session),控制终端(controlling terminal)的关系:
+1.一个会话能够拥有一个控制终端.
+2.出于隐私、安全、权限管理等目的,给我们一个操作系统,我们想要让它进行某项工作
+时,需要先登录进该操作系统,让它知道我们有权限能够操作它,以及具体用怎么样的
+权限来操作它.
+在我们登录操作系统的过程中,就涉及到和操作系统交互的设备,也就是控制终端.
+当我们通过终端登录(terminal login)时,控制终端是真实的终端设备(hard-wired 
+terminal device);当我们通过网络登录(network login)时,控制终端是伪终端设备.
+从书中的描述来看,控制终端对外面对用户,对内关联会话,用户从控制终端进行输入,
+关联着shell的会话从控制终端获取这些输入,并进行处理,然后将处理结果输出到控制
+终端,呈现给用户.一个大致的流程走向如下:
+	用户 <--> 控制终端 <--> 关联着shell的会话 <--> 操作系统内核
+3.一个拥有控制终端的会话有且只有一个前台进程组,用户通过其控制终端输入终端的
+特殊字符时,该会话的前台进程组中的所有进程都会接收到对应的信号(signal).如
+中断键(often DELETE or Control-C)会发送中断信号(interrupt signal),退出键(
+often Control-backslash)会发送退出信号(quit signal).
+后台进程组不会接收到这些信号.
+
+工作控制(job control),进程组(process group,控制终端(controlling terminal):
+1.一个工作(job)就是一个或多个进程的集合,一般是通过管道(pipeline)来关联的.如
+"vi main.c" 在前台启动一个工作,该工作只包含一个进程.
+"pr *.c | lpr &", "make all &" 在后台启动两个工作,这些进程全部都在后台运行.
+2.从书中描述来看,工作和进程组的概念存在相似之处.工作控制是指对前、后台进程组
+的控制.这些控制体现在前、后台进程组对控制终端的访问上.
+3.只有前台进程组可以接收到来自终端的输入.当后台进程组试图去读取终端输入时,
+程序不会报错,但是终端设备会察觉到这一点,并发送SIGTTIN信号给后台工作.这个信号
+通常会暂停后台工作.此后,我们发送发送继续信号(SIGCONT)让该后台工作重新运行.
+4.我们可以选择是否让后台工作可以控制终端上输出.如果选择禁止让后台工作往控制
+终端上输出,则后台工作试图往控制终端上输出时,会受到SIGTTOU信号,从而被暂停.

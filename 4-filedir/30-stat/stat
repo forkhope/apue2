@@ -1,0 +1,139 @@
+linux man手册中,提到 struct stat 的定义如下:
+struct stat {
+	dev_t st_dev;			/* ID of device containing file */
+	ino_t st_ino;			/* inode number */
+	mode_t st_mode;			/* protection */
+	nlink_t st_nlink;		/* number of hard links */
+	uid_t st_uid;			/* user ID of owner */
+	gid_t st_gid;			/* group ID of owner */
+	dev_t st_rdev;			/* device ID (if special file) */
+	off_t st_size;			/* total size, in bytes */
+	blksize_t st_blksize;	/* blocksize for file system I/O */
+	blkcnt_t st_blocks;		/* number of 512B blocks allocated */
+	time_t st_atime;		/* time of last access */
+	time_t st_mtime;		/* time of last modification */
+	time_t st_ctime;		/* time of last status change */
+};
+
+可见, struct stat 结构体总共有 13 个成员,下面会分别进行描述.
+
+stat(), fstat(), lstat() 函数都可以获取到一个文件的状态值.注意的是,这些函数
+从i-node 和 directory entry 中获取到值后,会填充到指定的结构体中,这个结构体
+并不没有指向 i-node 或者 directory entry, 所以改变这个结构体中的成员值,并没
+有改变 i-node 或者 directory entry 的值,例如执行
+	stat("xia", &sb);
+然后,再执行
+	sb.st_size = 53;	// 修改 sb 结构体的 st_size 成员的值
+这并没有实际将文件的大小修改为 53.这仅仅是修改了结构体变量的值而已.
+对于这一点,要有清楚地认识.
+
+1 	================================================
+The st_dev field describes the device on which this file resides. (The 
+major() and minor() macros may be useful to decompose the device ID in
+the field.)
+major()宏返回文件所在的设备驱动器(device drive), 一个设备驱动器可能存在
+多个文件系统,minor()宏返回文件所在的文件系统.
+
+2	=================================================
+The st_rdevv field describes the device that this file (inode) represents.
+The value contains the device number for the actual device. 对于这个字段的
+概念,具体不清楚,也不知道跟这个字段相关的函数有哪些.
+
+3	=================================================
+The st_size field gives the size of the file (if it is a regular file or a
+symbolic link in bytes. The size of a symlink is the length of the pathname
+it contains, without a trailing null byre.
+书中同样没有提到单独操作这个字段的相关函数,似乎只能获取到它的值.
+
+4 	=================================================
+The st_blocks field indicates the number of blocks allocated to the file,
+512-byte units. (This may be smaller than st_size/512 when the file has
+holes.)
+
+5	=================================================
+The st_blksize field gives the "preferred" blocksize for efficient file
+system I/O. (Writing to a file in smaller chunks may cause an inefficient
+read-modify-rewrite.)
+书中第 4.12 小节简单提到了这两个字段,没有提到单独操作这两个字段的函数.
+
+6	=================================================
+The field st_atime is changed by file access, for example, by execve(),
+mknod(), pipe(), utime() and read() (of more than zero bytes). Other 
+routines, link mmap(), may or may not update st_atime.
+
+7	=================================================
+The field st_mtime is changed by file modification, for example, by
+mknod(), truncate(), utime() and wirte (of more zero bytes). Moreover, 
+st_mtime of a directory is changed by the creation or deletion of files in
+that directory. The st_mtime field is not changed for chanes in owner,
+group, hard link count, or mode.
+书中提到, utime()函数可以改变这两个值,但是没有提到单独获取这两个值的函数,
+可以通过 stat() 函数来填充一个 struct stat 结构体,再通过 st_atime, 
+st_mtime 这两个成员来获取到它们的值.
+
+8	==================================================
+The field st_ctime is changed by writing or by setting inode information
+(i.e., owner, group, link count, mode, etc.). 这个字段没有单独来设置来它的
+值,而且 utime() 函数虽然说是改变 st_atime, st_mtime 的值,由于这两个值存在
+i-node中,改变它们的同时就会改变 st_ctime 的值.
+
+9	==================================================
+书中第 4.14 小节对 st_ino 作了描述,如下:
+The i-node contains all the information about the file: the file type, the
+file's access permission bits, the size of the file, points to the file's
+data blocks, and so on. Most of the information in the stat structure is
+obtained from the i-node. Only two items of interest are stored in the
+director entry: the filename and the i-node number; the other items(the
+length of the filename and the length of the directory record) are not of
+interest to this discussion. The data byte for the i-node number is ino_t.
+也就是说, stat()函数在填充struct stat 结构体时,大部分的值都是从i-node中
+获取,但是i-node号是从文件目录项中得到,该字段就是 st_ino.
+
+10, 11	====================================================
+st_uid 指示一个文件的拥有者用户ID (user ID of owner), st_gid 指示一个文件
+的拥有者组ID (group ID of owner).
+chown(), fchown(), lchown() 函数可以改变这两个字段的值,参考书中第4.11小节,
+书中没有提到单独获取这两个字段值的函数.
+
+12	===================================================
+书中第 4.14 小节对 st_nlink 字段进行了描述,它表示是一个文件的硬链接数目.
+确切的说是,它表示关联到一个 i-node 的文件的数目. Every i-node has a link
+count that contains the number of directory entries that point to the
+i-node. Only when the link count goes to 0 can the file be deleted.
+书中第 4.15 小节描述了对这个字段有影响的函数: link(), unlink(), remove().
+
+13	==================================================
+st_mode 字段是文件的权限位,它有多个位(bit)组成,包括文件的类型,用户,组用户,
+其他用户的读写执行权限, set-user-ID, set-group-ID 等等.
+
+UNIX系统的文件类型总共有 7 种:
+	(1)regular file: 用 S_ISREG() 或者 (st_mode & S_IFMT) == S_IFREG 来判断
+	(2)directory file: S_ISDIR(), (st_mode & S_IFMT) == S_IFDIR
+					   mkdir() 函数可以创建一个空目录,默认包含.和..两个项
+	(3)charecter special file: S_ISCHR(), (st_mode & S_IFMT) == S_IFCHR
+	(4)block special file: S_ISBLK(), (st_mode & S_IFMT) == S_IFBLK
+	(5)pipe or FIFO: S_ISFIFO(), (st_mode & S_IFMT) == S_IFIFO
+	(6)symbolic link: S_ISLNK(), (st_mode & S_IFMT) == S_IFLNK,
+					  symlink() 函数可以创建一个符号链接文件.
+	(7)socket: S_ISSOCK(), (st_mode & S_IFMT) == S_IFSOCK
+
+读,写,执行权限位包括:
+S_IRUSR, S_IWUSR, S_IXUSR, S_IRWXU
+S_IRGRP, S_IWGRP, S_IXGRP, S_IRWXG
+S_IROTH, S_IWOTH, S_IXOTH, S_IRWXO
+chmod(), fchmod()函数可以改变这些权限位的值.
+umask() 函数影响新建文件或者目录的真实权限位.
+
+set-user-ID位由 S_ISUID 来表示, set-group-ID位由 S_ISGID 来表示.
+同样,可以使用 chmod, fchmod(), lchmod() 函数来改变这两个位的值.
+
+一个进程会关联到 real user ID, real group ID, effective user ID,
+effective group ID, saved set-user-ID, saved set-group-ID 这几个ID.
+注意, set-user-ID 和 set-group-ID是文件的属性,而 saved set-user-ID 和
+saved set-group-ID是进程的属性,这两个是不同的概念. 参见书中第 4.4 小节.
+另外, real user ID, real group ID 和 st_uid, st_gid 也是不同的概念,
+st_uid, st_gid是文件属性,表示文件的拥有者和拥有组.而 real user ID, real
+group ID是用户帐号的属性,用于标识一个用户,进而表示一个用户所拥有的权限,
+用户在登录系统时,这两个值是从 /etc/passwd 文件中读取出来的,
+
+stick bit位由 S_ISVTX 来表示.改变该位的方法如上.

@@ -1,0 +1,29 @@
+Historically, a C program has been composed of the following pieces:
+1. Text segment, the machine instructions that the CPU executes.
+2. Initialized data segment, usually called simply the data segment,
+   containing variables that are specifically initialized in the program.
+3. Uninitialized data segment, often called the "bss" segment.
+   bss: block started by symbol.
+4. Stack, where automatic variables are stored, along with information that
+   is saved each time a function is called.
+5. Heap, where dynamic memory allocation usually takes place. Historically,
+   the heap has been located between the uninitialized data and the stack.
+
+   high address |-------------------| command-line arguments
+   				|-------------------| and environment variables
+				|        stack      |
+				|-------------------|
+				|					|
+				|					|
+				|					|
+				|-------------------|
+				|		heap		|
+				|-------------------|
+				|uninitialized data | initialized to
+				|		(bss)		| zero by exec
+				|-------------------|
+				| initialized data  | read from
+				|-------------------| program file 
+				|		text		| by exec
+	low address |-------------------|
+			Typical memory arrangement

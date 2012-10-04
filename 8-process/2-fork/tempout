@@ -1,0 +1,5 @@
+a write to stdout
+before fork
+pid = 3117, global = 7, autoval = 89
+before fork
+pid = 3116, global = 6, autoval = 88

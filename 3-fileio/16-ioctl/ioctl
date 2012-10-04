@@ -1,0 +1,7 @@
+The ioctl function has always been the catchall for I/O operations.
+Anything that couldn't be expressed using one of the other functions in
+this chapter (Chapter 3) usually ended up being specified with an ioctl().
+
+#include <sys/ioctl.h>		/* Linux */
+int ioctl(int filedes, int request, ...);
+	Returns: -1 on error, something else if OK.

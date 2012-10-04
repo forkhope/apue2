@@ -1,0 +1,42 @@
+There are eight ways for a process to terminate.
+
+Three functions terminate a process normally: _exit and _Exit, which
+return to the kernel immediately, and exit, which performs certain cleanup
+processing and then return to the kernel.
+	#include <stdlib.h>		// ISO C
+	void exit(int status);	void _Exit(int status);
+	#include <unistd.h>		// POSIX.1
+	void _exit(int status);
+
+书中提到: Historically, the exit function has always performed a clean
+shutdown of the standard I/O libraary: the fclose function is called for
+all open streams. Recall from Section 5.5 that this causes all buffered
+output data to be flushed (written to the file).
+而书中 Section 3.3 close Function 提到: When a process terminates, all of
+its open files are closed automatically by the kernel.
+
+注意这两者的区别:当程序调用exit()退出时,exit()函数调用fclose()函数来关闭
+进程中所有打开的标准I/O流,这些I/O流是在用户进程被关闭的. 而进程终止时,所有
+被打开但还没有关闭的文件描述符会被内核自动关闭,它们是在内核态被关闭的.
+
+The start-up routine that we mentioned in the previous section is also
+written so that if the main() function returns, the exit() function is
+called. If the start-up routine were coded in C (it is ofen coded in
+assembler) the call to main() could look like:
+	exit(main(argc, argv));
+
+书中说: Returning an integer value from the main() function is equivalent
+to calling exit() with the same value. Thus
+	exit(0);
+is the same as
+	return(0);
+from the main() function.
+
+但是从上面的描述看,我觉得具体还是有一点细小的区别.
+main()通过 return 返回,会返回 C start-up routine,然后C start-up routine 会
+调用 exit() 函数来做最后的清理工作,然后返回到内核; 
+而如果 main() 函数直接调用 exit() 函数返回,则程序的执行过程是从 main() 函数
+执行到 exit() 函数,然后 exit() 函数执行 exit handlers，再调用 _exit() 或者 
+_Exit(),返回到内核, main()函数将不再返回到 C start-up routine.
+关于这一点,可以参见书中 "atexit Function" 小节中的Figure 7.2,从这个图可以
+看到,main()调用exit()函数后,exit()再调用_exit() or _Exit(),然后返回到内核.
