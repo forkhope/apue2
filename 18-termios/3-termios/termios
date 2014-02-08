@@ -1,0 +1,117 @@
+All the terminal device characteristics that we can examine and change are
+contained in a termios structure. This structure is defined in the header
+<termios.h>:
+    struct termios {
+        tcflag_t c_iflag;   /* input flags */
+        tcflag_t c_oflag;   /* output flags */
+        tcflag_t c_cflag;   /* control flags */
+        tcflag_t c_lflag;   /* local flags */
+        cc_t     c_cc[NCCS; /* control characters */
+    };
+Roughly speaking, the input flags control the input of characters by the
+terminal device driver (strip eighth bit on input, enable input parity
+checking, etc.), the output flags control the driver output (perform output
+processing, map newline to CR/LF, etc.), the control flags affect the
+RS-232 serial lines (ignore modem status lines, one or two stop bits per
+character, etc.), and the local flags affect the interface between the
+driver and the user (echo on or off, visually erase characters, enable
+terminal-generated signals, job control stop signal for background output,
+etc.).
+
+The type tcflag_t is big enough to hold each of the flag values and is often
+defined as an unsigned int or an unsigned long. The c_cc array contains all
+the special characters that we can change. NCCS is the number of elemenets
+in this array and is typically between 15 and 20 (since most implementations
+of the UNIX System support more than the 11 POSIX-defined special characters
+). The cc_t type is large enough to hold each special character and is
+typically an unsigned char.
+
+下面列举了一些终端标志位 (terminal flags). 我们可以使用这些终端
+标志位来改变终端设置的特性.
+------------  c_cflag terminal flags -----------------
+1. CLOCAL: ignore modem status lines
+2. CREAD: enable receiver
+3. CRTSCTS: enable hardware flow control. 非POSIX.1标准.
+4. CSIZE: character size mask
+5. CSTOPB: send two stop bits, else one. 即如果不设置该位,则只发送一位
+6. HUPCL: hang up on last close
+7. PARENG: parity enable
+8. PARODD: oll parity, else even
+
+------------  c_iflag terminal flags -----------------
+1. BRKINT: generate SIGINT on BREAK
+2. ICRNL: map CR to NL on input
+3. IGNBRK: ignore BREAK condition
+4. IGNCR: ignore CR
+5. IGNPAR: ignore characters with parity errors
+6. IMAXBEL: ring bell on input queue full. 非POSIX.1标准
+7. INLCR: map NL to CR on input
+8. INPCK: enable input parity checking
+9. ISTRIP: strip eighth bit off input characters
+10.IUCLC: map uppercase to lowercase on input. 非POSIX.1标准
+11.IXANY: enable any characters to restart output. 非POSIX.1标准
+12.IXOFF: enable start/stop input flow control
+13.IXON: enable start/stop output flow
+14.PARMRK: mark parity errors
+
+------------  c_lflag terminal flags -----------------
+1. ECHO: enable echo
+2. ECHOCTL: enable control chars as ^(Char). 非POSIX.1标准
+3. ECHOE: visually erase chars
+4. ECHOK: echo kill
+5. ECHOKE: visual erase for kill. 非POSIX.1标准
+6. ECHONL: echo NL
+7. ECHOPRT: visual erase mode for hard copy. 非POSIX.1标准
+8. FLUSHO: output being flushed. 非POSIX.1标准
+9. ICANON: canonical input
+10.IEXTEN: enable extended input char processing
+11.ISIG: enable terminal-generated signals
+12.NOFLSH: disable flush after interrupt or quit
+13.PENDIN: retype pending input. 非POSIX.1标准
+14.TOSTOP: send SIGTTOU for background output
+15.XCASE: canonical upper/lower presentation. 非POSIX.1标准
+
+------------  c_oflag terminal flags -----------------
+1. BSDLY: backspace delay mask.     XSI
+2. CMSPAR: mark or space parity.
+3. CRDLY: CR delay mask.            XSI
+4. FFDLY: from feed delay mask.     XSI
+5. NLDLY: NL delay mask.            XSI
+6. OCRNL: map CR to NL on output.   XSI
+7. OFDEL: fill is DEL, else NUL.    XSI    
+8. OFILL: use fill character for delay. XSI
+9. OLCUC: map lowercase to uppercase on output.
+10.ONLCR: map NL to CR-NL.          XSI
+11.ONLRET: NL performs CR function. XSI
+12.ONOCR: no CR output at column 0. XSI
+13.OPOST: perform output processing.    XSI
+14.TABDLY: horizontal tab delay mask.   XSI
+15.VTDLY: vertical tab delay mask.  XSI
+
+=======================================================
+终端I/O标志位的获取和设置函数
+1. tcgetattr(): fetch attributes (termios structure)
+2. tcsetattr(): set attributes (termios structure
+3. cfgetispeed(): get input speed
+4. cfgetospeed(): get output speed
+5. cfsetispeed(): set input speed
+6. cfsetospeed(): set output speed
+7. tcdrain(): wait for all output to be transmitted
+8. tcflow(): suspend transmit or receive
+9. tcflush(): flush pending input and/or output
+10.tcsendbreak(): send BREAK character
+11.tcgetpgrp(): get foreground process group ID
+12.tcsetpgrp(): set foreground process group ID
+13.tcgetsid(): get process group ID of session leader for controlling
+               TTY (XSI extension)
+其中, tcsendbreak(), tcdrain(), tcflush(), tcflow() 属于行控制函数,
+line control functions.
+
+POSIX.1 doesn't specify where in the termios structure the baud rate
+information is stored; that is an implementation detail. Some systems,
+such as Linux and Solaris, store this information in the c_cflag field.
+BSD-derived systems, such as FreeBSD and Mac OS X, have two separate
+fields in the structure: one for the input speed and one for the output
+speed. 所以, cfsetispeed() 和 cfsetospeed() 函数只是将波特率的值写到
+termios 结构体里面,并还没有真正的设置终端的波特率,需要再另外调用tcsetattr()
+函数来将termios结构体中存储的波特率设置到终端去.

@@ -1,0 +1,19 @@
+A thread will deaklock itseof if it tries to lock the same mutex twice, but
+there are less obvious ways to create deaklocks with mutexes. For example,
+when we use more than one mutex in our programs, a deadlock can occur if we
+allow one thread to hold a motex and block while trying to lock a second
+mutex at the same time that another thread holding the second mutex tries
+to lock the first mutex. Neither thread can proceed, because each needs a
+resource that is held by the other, so we have a deadlock.
+
+Deadlocks can be avoided by carefully controlling the order in which mutexes
+are locked. You'll have the potential for a deadlock only when one thread
+attempts to lock the mutexes in the opposite order from another thread.
+
+Sometimes, and application's architecture makes it difficult to apply a
+lock ordering. In this case, you might to able to release your locks and
+try again at a later time. You can use the pthread_mutex_trylock() interface
+to a avoid deadlocking the this case. If you are already hodling locks and
+pthread_mutex_trylock() is successful, then you can proceed. If it can't
+acquire the lock, however, you can release the locks you already hold, clean
+up, and try again later.

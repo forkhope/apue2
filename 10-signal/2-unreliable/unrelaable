@@ -1,0 +1,21 @@
+In earlier version of the UNIX System (such as Version 7), signals were
+unreliable. By this we mean that signals could get lost: a signal could
+occur and process would never know about it.
+即,所谓不可靠信号,主要是指信号有可能会丢失,程序完全不知道曾经产生过该信号.
+
+One problem with these early version is that the action for a signal was
+reset to its default each time the signal occurred.
+Linux系统中,关于这一点,取决于具体的函数库.参见man signal手册中的Portability
+小节.在里面的描述中,如果信号函数执行结束后,该信号的行为被重置为默认,则对此,
+称为: The signal() function provides System V semantics.
+如果信号函数执行结束后,该信号依然保持该信号处理函数不变,则是 BSD semantics.
+
+Another problem with these earlier systems is that the process was unable
+to turn a signal off when it didn't want the signal to occur. All the
+process could do was ignore the signal.
+
+书中给出了两个早期版本的信号函数可能会导致信号丢失的情况.这两个情况都跟
+时间窗口(a window of time)有关,类似于条件竞赛一样.
+系统在执行完信号处理函数后,返回到原先程序的过程中,可能会存在一段时间间隔,在
+这个时间间隔中,如果再次产生信号,则程序可能会无法正确的处理这种情况,导致这个
+信号没有得到有效处理,即被认为是丢失.具体的丢失场景可以看一下书中10.4小节.

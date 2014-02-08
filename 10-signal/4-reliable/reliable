@@ -1,0 +1,70 @@
+We need to define some of the terms used throughout our discussion of
+signals. 
+
+1.信号产生:发生特定事件会导致信号产生.信号产生后,内核会在进程表中设置一个
+标志位,猜测进程正是通过这个标志位来得知信号产生了.
+First a signal is generated for a process (or sent to a process)
+when the event that causes the signal occurs. The event could be a hardware
+exception (e.g., divide by 0), a software condition (e.g., an alarm timer
+expiring), a terminal-generated signal, or a call to the kill() function.
+When the signal is generated, the kernel usually sets a flag of some form
+in the process table.
+
+2.信号递送:信号的相应措施(action)被开始执行,即信号处理函数被执行的时候.
+所谓"递送",我的理解是指"信号处理函数被调用来处理相应信号",由于信号处理函数
+应该是被内核调用的,所以使用"递送"这个带有被动态的词.
+We say that a signal is delivered to a process when the action for a signal
+is taken.
+
+3.信号悬挂:从信号产生到被信号被递送期间,信号处于悬挂状态.即信号已经产生,但
+是相应的信号处理函数还没有被调用.
+During the time between the generation of a signal and its delivery, the
+signal is said to be pending.
+
+4.信号阻塞:进程可以选择阻塞某个信号的递送,即暂时还没有调用对应的信号处理函数来处理它.此时,信号处于悬挂状态.根据下面的描述,信号悬挂只针对那些被默认处理
+(default action)或者被捕抓(catch)的信号,被忽略的信号应该不存在悬挂的概念.
+A process has the option of blocking the delivery of a signal. If a signal
+that is blocked is generated for a process, and if the action for that
+signal is either the default or to catch the signal, then the signal remains
+pending for the process until the process either (a)unblocks the signal or
+(b)changes the action to ignore the signal.
+
+系统在递送信号之时才决定是否阻塞这个信号的递送,而不是在信号产生之后就决定
+是否阻塞这个信号的递送.
+The system determines what to do with a blocked signal when the signal is
+delivered, not when it's generated. This allows the process to change the
+action for the signal before it's delivered. The sigpending() function can
+be called by a process to determine which signals are blocked and pending.
+
+5.信号阻塞掩码:每个进程都有一个信号掩码,用来指定当前被阻塞递送的信号.
+和上面的内容联系起来,这应该就是进程用来阻塞信号递送的选项(option)了.
+Each process has a signal mask that defines the set of signals currently
+blocked from delivery to that process. We can think of this mask as having
+one bit for each possible signal. If the bit is on for a given signal, that
+signal is currently blocked. A process can examine and change its current
+signal mask by calling sigprocmask().
+
+信号掩码对应的数据类型是 sigset_t 类型.
+Since it is possible for the number of signals to exceed the number of bits
+in an integer, POSIX.1 defines a data type, called sigset_t, that holds a
+signal set. The signal mask, for example, is stored in one of these signal
+sets.
+
+6.信号排队:在信号阻塞期间,若该信号产生多次会怎么样? POSIX.1 标准允许系统递送
+该信号一次或者多次(此时,应该是信号产生多少次,就递送多少次).如果系统递送该信
+号多次,则称该信号被排队. 绝大部分非实时的UNIX操作系统都只递送信号一次.
+What happens if a blocked signal is generated more than once before the
+process unblocks the signal? POSIX.1 allows the system to deliver the signal
+either once or more than once. If the system delivers the signal more than
+once, we say that the signals are queued. Most UNIX systems, however, do not
+queue signals unless they support the real-time extensions to POSIX.1.
+Instead, the UNIX kernel simply delivers the signal once.
+
+7.信号递送竞争:当多个信号同时准备好被递送时,会发生些什么? 对于这种情况,
+POSIX.1 没有指定递送这些信号的顺序.但它给的建议是,先递送和进程当前状态相关
+的信号, SIGSEGV 就是这样一个信号.
+What happens if more than one signal is ready to be delivered to process?
+POSIX.1 does not specify the order in which the signals are delivered to
+the process. The Rationale for POSIX.1 does suggest, however, that signals
+related to the current state of the process be delivered before other
+signals. (SIGSEGV is one such signal.)

@@ -12,7 +12,7 @@
  * 是该链接文件指向的文件,即 stat() 函数无法获取到一个链接文件本身的信息;
  * 如果要获取一个链接文件本身的信息,可以使用 lstat() 函数.
  *
- * 结构体 struct stat 一般有 13 个成员, 它们都已 st_t 开头, 如下:
+ * 结构体 struct stat 一般有 13 个成员, 它们都已 st_ 开头, 如下:
  * st_dev,		st_ino,			st_mode,		st_nlink,
  * st_uid,		st_gid,			st_rdev,		st_size,
  * st_blksize,	st_blocks,		st_atime,		st_mtime,	st_ctime

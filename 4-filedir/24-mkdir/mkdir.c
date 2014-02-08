@@ -28,8 +28,10 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	// 下面的mode指定所有权限,但是所创建的目录并不拥有所有权限,因为这个
-	// 权限会被 umask() 掩码所修改
+	/* 下面的mode指定所有权限,但是所创建的目录并不拥有所有权限,因为这个
+	 * 权限会被 umask() 掩码所修改. 另外,从执行结果看,mkdir()函数不能
+     * 递归创建目录,例如传入参数"a/b/c"会报错:No such file or directory
+     */
 	mode = S_IRWXU | S_IRWXG | S_IRWXO;
 	if (mkdir(argv[1], mode) < 0) {
 		printf("mkdir error: %s\n", strerror(errno));

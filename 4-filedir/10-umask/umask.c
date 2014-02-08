@@ -23,6 +23,9 @@
  * 权限并不一定就是新文件真正的权限,指定的权限值需要和某个值相与,得到的值
  * 才是新文件真正的权限.这个值就是对文件创建掩码(file mode creation mask)
  * 求反之后得到的值. 具体的例子见下面的程序:
+ *
+ * If we want to ensure that anyone can read a file, we should set the
+ * umask to 0.
  */
 int main(int argc, char *argv[])
 {

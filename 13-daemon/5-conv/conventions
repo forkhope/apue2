@@ -1,0 +1,17 @@
+Several common conventions are followed by daemons in the UNIX System.
+1. If the daemon uses a lock file, the file is usually stored in /var/run.
+Note, however, that the daemon might need superuser permissions to create
+a file here. The name of the file is usually name.pid, where name is the
+name of the daemon or the service.
+2. If the daemon supports configuration options, they are usually stored in
+/etc/. The configuration file is named name.conf, where name is the name of
+the daemon or the name of the service.
+3. Daemons can be started from the command line, but they are usually
+started from one of the system initialization scripts (/etc/rc* or
+/etc/init.d/*). If the daemon should be restarted automatically when it
+exits, we can arrange for init to restart it if we include a respawn entry
+for it in /etc/inittab.
+4. If a daemon has a configuration file, the daemon reads it when it starts,
+but usually won't look at it again. If an administrator changes the
+configuration, the daemon would need to be stopped and restarted to account
+for the configuration changes.

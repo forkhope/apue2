@@ -1,0 +1,174 @@
+The term pseudo terminal implies that it looks like a terminal to an
+application program, but it's not a real terminal. Figure 19.1 shows the
+typical arrangement of the processes involved when a pseudo terminal is
+being used. The key points in this figure are the following.
+
+   Figure 19.1 Typical arrangement of processes using a pseudo terminal
+        ----------------   fork      ----------------
+        | user process |------------>| user process |
+        ----------------   exec      ----------------
+               ^                             ^ stdin, stdout, stderr
+               |                             |
+   ----------------------------------------------------------
+   |           |                             |              |   
+   |           v                             v              |   
+   |    ------------------           ------------------     | 
+   |    | read and write |           | read and write |     |
+   |    |   functions    |           |   functions    |     |
+   |    ------------------           ------------------     |
+   |        |       ^                    |       ^          | kernel
+   |        |       |                    v       |          |
+   |        |       |                ------------------     |
+   |        |       |                | terminal line  |     |
+   |        |       |                |   discipline   |     |
+   |        |       |                ------------------     |
+   |        |       |                    |       ^          |
+   |        v       |                    v       |          |
+   |    ------------------           ------------------     |
+   |    | read and write |           | read and write |     |
+   |    |   functions    |           |   functions    |     |
+   |    ------------------           ------------------     |
+   |        |       ^                    |       ^          |
+   |        |       |                    v       |          |
+   |        |       <---------------------       |          |
+   |        v------------------------------------>          |
+   ----------------------------------------------------------
+
+1. Normally, a process opens the pseudo-terminal master and then calls fork.
+The child establishes a new session, opens the corresponding pseudo-terminal
+slave, duplicates the file descriptor to the standard input, standard
+output, and standard error, and then calls exec(). The pseudo-terminal
+slave becomes the controlling terminal for the child process.
+2. It appears to the user process above the slave that its standard input,
+standard outout, and standard error are a terminal device. The process can
+issue all the terminal I/O functions on these descriptors. But since there
+is not a real terminal device beneath the slave, functions that don't make
+sense (change the baud rate, send a break character, set odd parity, etc.)
+are just ignored. 也就说,由于伪终端表示真实的终端设备,在设置伪终端属性时,有
+一些无法真实生效的属性会被忽略,而有一些属性是能生效的.
+3. Anything written to the master appears as input to the slave and vice
+versa. Indeed, all the input to the slave comes from the user process above
+the pseudo-terminal master. This behaves like a bidirectional pipe, but with
+the terminal line discipline module above the slave, we have additional
+capabilities over a plain pipe. 即,伪终端从属设备上的输入都是来自于主设备.
+
+伪终端(pseudo terminal)是成对的逻辑终端设备,其使用是成对出现的,分为主设备
+(pseudo-terminal master)和从属设备(pseudo-terminal slave). 关于主从设备的
+命名,有两个命名风格:
+1. BSD PTYs: master: /dev/ptyMN, slave: /dev/ttyMN. 其中, M 和 N 的命名
+方式为: M: p-z, a-e, 共16个. N: 0-9, a-f, 共16个. 所以,默认最大支持256个.
+2. Unix98 PTYS: master: /dev/ptmx, slave: /dev/pts/N.
+
+从书上的描述来看,伪终端主要在两个父子进程之间使用.
+We'll now examine some of the typical uses of pseudo terminals.
+1. Network Login Servers
+Pseudo terminals are built into servers that provide network logins. The
+typical examples are the telnetd and rlogind servers. Once the login shell
+is running on the remote host, we have the arrangement shown in Figure 19.3
+A similar arrangement is used by the telnetd server.
+       Figure 19.3. Arrangement of processes for rlogind server
+        -----------------------    fork        ----------------
+        |   rlogind server    |---------------->| login shell  |
+        -----------------------    exec,exec   ----------------
+          |   ^           |  ^                 stdout |    ^ stdin
+          |   |           |  |                 stderr |    |
+   ----------------------------------------------------------------
+   |      |   |           |  |                       |    |       |
+   |      v   |           |  |                       v    |       |
+   |  ------------        |  |       ---------------------------- |
+   |  |  TCP/IP  |        |  |       | terminal line discipline | |
+   |  ------------        |  |       ---------------------------- |
+   |      |   ^           |  |                       |   ^        | kernel
+   |      v   |           v  |                       v   |        |
+   |  -----------------  -----------              -------------   |
+   |  |    network    |  | PTY     |              | PTY       |   |
+   |  | device driver |  |  master |              |  slave    |   |
+   |  -----------------  -----------              -------------   |
+   |        ^              |    ^                    |    ^       |
+   |        |              |    |<-------------------v    |       |
+   |        |              v------------------------------>       |
+   ----------------------------------------------------------------
+            |
+            v
+      ...............
+          network
+We show two calls to exec() between the rlogind server and the login shell,
+because the login program is usually between the two to validate the user.
+
+A key point in this figure is that the process driving the PTY master is
+normally reading and writing another I/O stream at the same time. In this
+example, the other I/O stream is the TCP/IP box. This implies that the
+process must be using some from I/O multiplexing, such as select or poll,
+or must be divided into two processes or threads.
+即,用户登录远程主机后,远程主机需要启动一个login shell来处理用户输入的命令,
+而使用伪终端后,该login shell就能处理用户输入的终端特殊字符,以及执行一些其
+它的控制操作,如是否回显等.
+
+2. script Program
+The script program that is supplied with most UNIX systems makes a copy in
+a file of everything that is input and output during a terminal session.
+The program does this by placing itself between the terminal and a new
+invocation of our login shell. Figure 19.4 details the interactions involved
+in the script program. Here, we specifically show that the script program is
+normally run from a login shell, which then waits for script to terminate.
+       Figure 19.4. The script program
+                        ---------------
+                        | script file |
+                        ---------------
+                               ^
+                               |
+  --------------- fork ------------------ fork  ----------------
+  | login shell |----->| rlogind server |------>| login shell  |
+  --------------- exec ------------------ exec  ----------------
+    (sleeping)          |  |     |   ^         stdout |    ^ stdin
+                        |  |     |   |         stderr |    |
+   ----------------------------------------------------------------
+   |                    |  |     |   |               |    |       |
+   |                    v  v     |   |               v    |       |
+   |  -----------------------    |   |        ------------------- |
+   |  |    terminal line    |    |   |        |  terminal line  | |
+   |  |     discipline      |    |   |        |   discipline    | |
+   |  -----------------------    |   |        ------------------- |
+   |      |   ^                  |   |               |   ^        | kernel
+   |      v   |                  v   |               v   |        |
+   |  -----------------  ---------------         --------------   |
+   |  |   terminal    |  |   PTY       |         | PTY        |   |
+   |  | device driver |  |    master   |         |   slave    |   |
+   |  -----------------  ---------------         --------------   |
+   |        ^              |    ^                    |    ^       |
+   |        |              |    |<-------------------v    |       |
+   |        |              v------------------------------>       |
+   ----------------------------------------------------------------
+            |
+            v
+     ....................
+      user at a terminal
+While script is running everything output by the terminal line discipline
+above the PTY slave is copied to the script file (usually called typescript)
+Since our keystrokes are normally echoed by that line discipline module, the
+script file also contains out input. The script file won't contain any
+passwords that we enter, however, since passwords aren't echoed.
+
+3. Running Copreocesses
+In the coprocesses examples in Figure 15.19, we couldn't invoke a coprocess
+that used the standard I/O library for its input and output, because when we
+talked to the coprocess across a pipe, the standard I/O library fully
+buffered the standard input and standard output, leading to a deadlock. If
+the coprocess is a compiled program for which we don't have the source code,
+we can't add fflush() statements to solve this program. Figure 15.16 showed
+a process driving a coprocess. What we need to do is place a pseudo terminal
+between the two processes, as shown in Figure 19.5, to trick the coprocess
+into thinking that it is being driven from a terminal insteaded of from
+another process.
+  Figure 19.5. Driving a coprocess using a pseudo terminal
+  ------------ pipe1  ------------       -------------
+  | driving  |------->|  pseudo  |------>| stdin     | coprocess
+  | program  |<-------| terminal |<------| stdout    |
+  ------------  pipe2 ------------       -------------
+Now the standard input and standard output of the coprocess look like a
+terminal device, so the standard I/O library will set these two streams to
+be line buffered.
+
+4. Watching the Output of Long-Running Programs
+这个就不手打了,其实就是通过一个命名为pty的程序来启动要观察的程序,然后
+由pty程序把要观察程序的输入写到输出文件里面.

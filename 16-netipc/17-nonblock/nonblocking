@@ -1,0 +1,9 @@
+Normally, the recv() functions will block when no data is immediately
+available. Similarly, the send() functions will block when there is not
+enough room in the socket's output queue to send the message. This behavior
+changes when the socket is in nonblocking mode. In this case, these
+functions will fail instead of blocking, setting errno to either
+EWOULDBLOCK or EAGAIN. When this happens, we can use either poll() or
+select() to determine when we can receive or transmit data.
+
+书中另外还提到了 Asynchronouts I/o 的概念.

@@ -1,0 +1,18 @@
+Just as every process has a process ID, every thread has a thread ID. Unlike
+the process ID, which is unique in the system, the thread ID has
+significance only within the context of the process of which it belongs.
+
+A thread ID is represented by the pthread_t data type. Implementations are
+allowed to use a structure to represent the pthread_t data type, so portable
+implementations can't treat them as integers. Therefore, a function must be
+used to compare two thread IDs.
+#include <pthread.h>
+int pthread_equal(pthread_t tid1, pthread_t tid2);
+		Returns: nonzero if equal, 0 otherwise.
+
+A consequence of allowing the pthead_t data type to be a structure is that
+there is no portable way to print its value. A thread can obtain its own
+thread ID by calling the pthread_self function.
+#include <pthread.h>
+pthread_t pthread_self(void);
+		Returns: the thread ID of the calling thread.

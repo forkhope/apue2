@@ -1,0 +1,46 @@
+Noncanonical mode is specified by turning off the ICANON flag in the
+c_lflag field of the termios structure. In noncanonical mode, the input
+data is not assembled into lines. The following special characters are
+not processed: ERASE, KILL, EOF, NL, EOL, EOL2, CR, REPRINT, STATUS,
+and WERASE.
+
+With noncanonical mode, how does the system know when to return data to
+us? The solution is to tell the system to return when either a specified
+amount of data has been read or after a given amount of time has passed.
+This technique uses two variables in the c_cc array in the termios
+structure: MIN and TIME. These two elements of the array are indexed by
+the names VMIN and VTIME.
+
+MIN specifies the minumum number of bytes before a read() returns. TIME
+specifies the number of tenths of a second to wait for data to arrive.
+These are four cases.
+Case A: MIN > 0, TIME > 0
+TIME specifies an interbyte timer that is started only when the first
+byte is received. If MIN bytes are received before the timer expires,
+read() returns MIN bytes. If the timer expires before MIN bytes are
+received, read() returns the bytes recevied. (At least one byte is
+returned if the timer expires, because the timer is not started until
+the first byte is received.) In this case, the caller blocks until the
+first byte is received. If data is already available when read() is called,
+it is as if the data had been received immediately after the read().
+
+Case B: MIN > 0, TIME == 0
+The read() does not return until MIN bytes have been received. This can
+cause a read() to block indefinitely.
+
+Case C: MIN == 0, TIME > 0
+TIME specifies a read timer that is started when read() is called.
+(Compare this to case A, in which a nonzero TIME represented an interbyte
+timer that was not started until the first byte was received.) The read()
+returns when a single byte is received or when the timer expires. If the
+timer expires, read() returns 0.
+
+Case D: MIN == 0, TIME == 0
+If some data is available, read() returns up to the number of bytes
+requested. If no data is available, read() returns 0 immediately.
+
+Realize in all these cases that MIN is only a minimum. If the program
+requests more than MIN bytes of data, it's possible to receive up to the
+requested amount. This also applies to cases C and D, in which MIN is 0.
+
+这里就不写例子了,之前已经写过,参看那里即可.书中的例子也没有去看.先这样吧.

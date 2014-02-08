@@ -1,0 +1,17 @@
+Another "character" that we need to define for terminal devices is the
+BREAK character. BREAK is not really a character, but rather a condition
+that occurs during asynchronous serial data transmission. A BREAK condition
+is signaled to the device driver in various ways, depending on the serial
+interface.
+
+Most old serial terminals have a key labeled BREAK that generates the
+BREAK condition, which is why most people think of BREAK as a character.
+Some newer terminal keyboards don't have a BREAK key. On PCs, the break
+key might be mapped for other purpose. For example, the Windows command
+interpreter can be interrupted by typing Control-BREAK.
+
+For asynchronous serial data transmisstion, a BREAK is a sequence of
+zero-valued bits that continues for longer than the time requested to send
+one byte. The entire sequence of zero-valued bits is considered a single
+BREAK. In Section 18.8, we'll see how to send a BREAK with the tcsendbreak
+function.

@@ -1,0 +1,53 @@
+Part of the complexity of the terminal I/O system occurs because people
+use terminal I/O for so many different things: terminals, hardwired
+lines between computers, modems, printers, and so on.
+
+Terminal I/O has two modes:
+1. Canonical mode input processing. In this mode, terminal input
+processed as lines. The terminal driver returns at most one line pre
+read request. 此时,read()函数会在读到一行后返回.每行的分隔符是\n.
+2. Noncanonical mode input processing. The input characters are not
+assembled into lines.
+
+If we don't do anything special, canonical mode is the default. For
+example, if the shell redirects standard input to the terminal and we
+use read() and write() to copy standard input to standard output, the
+terminal is in canonical mode, and each read() returns at most one line.
+
+The Version 7 and older BSD-style terminal drivers supported three modes
+for terminal input: (a) cooked mode (the input is collected into lines,
+and the special characters are processed), (b) raw mode (the input is not
+assembled into lines, and there is no processing of special characters),
+and (c) cbreak mode (the input is not assembled into lines, but some of
+the special characters are processed).
+
+POSIX.1 defines 11 special input characters, 9 of which we can change.
+We've been using some of these: the end-of-file character (usually
+Control-D) and the suspend character (usually Control-Z).
+
+We can think of a terminal device as being controlled by a terminal driver,
+usually within the kernel. Each terminal device has an input queue and an
+output queue.
+(1) If echoing is enabled, there is an implied link between the input queue
+and the output queue.
+(2) The size of the input queue, MAX_INPUT, is finite. When the input queue
+for a particular device fills, the system behavior is implementation
+dependent. Most UNIX systems echo the bell character when this happeds.
+(3) There is another input limit, MAX_CANON. This limit is the maximum
+number of bytes in a canonical input line.
+(4) Although the size of the output queue is finite, no constants defining
+that size are accessible to the program, because when the output queue
+starts to fill up, the kernel simply puts the writing process to sleep
+until room is available.
+(5) We'll see how the tcflush() flush function allows us to flush either
+the input queue or the output queue. Similarly, when we describe the
+tcsetattr() function, we'll see how we can tell the system to change the
+attributes of a terminal device only after the output queue is empty. We
+can also tell the system to discard everything in the input queue when
+changing the terminal attributes.
+
+Most UNIX systems implement all the canonical processing in a module called
+the terminal line discipline. We can think of this module as a box that
+sits between the kernel's generic read and write functions and the actual
+device driver.  user process<-->read and write functions<-->
+    terminal line discipline<-->terminal device driver<-->actual device

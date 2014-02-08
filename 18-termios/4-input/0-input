@@ -1,0 +1,57 @@
+POSIX.1 defines 11 characters that are handled specially on input.
+Implementations define additional special characters.
+下面列举了一些特殊的终端输入字符 (special terminal input characters).
+1. CR: carriage return, (can't change), c_lflag, ICANON, \r
+2. DISCARD (非标准): discard output, VDISCARD, c_lflag, IEXTEN, ^O
+3. EOF: end of file, VEOF, c_lflag, ICANON, ^D
+4. EOL: end of line, VEOL, c_lflag, ICANON, (NUL)
+5. EOL2 (非标准): alternate end of line, VEOL2, c_lflag, ICANON, (NUL)
+6. ERASE: backspace one character VERASE, c_lflag, ICANON, ^H,^?
+7. INTR: interrupt signal (SIGINT), VINTR, c_lflag, ISIG, ^?,^C
+8. KILL: erase line, VKILL, c_lflag, ICANON, ^U
+9. LNEXT (非标准): literal next, VLNEXT, c_lflag, ICANON, ^V
+10.NL: line feed (newline), (can't change), c_lflag, ICANON, \n
+11.QUIT: quit signal (SIGQUIT), VQUIT, c_lflag, ISIG, ^\
+12.REPRINT (非标准): reprint all input: VREPRINT, c_lflag, ICANON, ^R
+13.START: resume output, VSTART, c_iflag, IXON/IXOFF, ^Q
+14.STOP: stop output, VSTOP, c_iflag, IXON/IXOFF, ^S
+15.SUSP: suspend signal (SIGTSTP), VSUSP, c_lflag, ISIG, ^Z
+16.WERASE (非标准): backspace one word, VWERASE, c_lflag, ICANON, ^W
+之前提到POSIX.1定义了11个标准输入字符,在上面的16个字符中,不是POSIX.1标准的
+是: DISCARD, EOF2, LNEXT, REPRINT, WERASE 这5个字符.
+
+Of the 11 POSIX.1 special characters, we can change 9 of them to almost
+any value that we like. The exceptions are the newline and carriage return
+characters (\n and \r, respectively) and perhaps the STOP and START
+characters (depends on the implementation). To do this, we modify the
+appropriate entry in the c_cc array of the termios structure. The elements
+in this array are referred to by name, with each name beginning with a V.
+
+POSIX.1 allows us to disable these characters. If we set the value of an
+entry in the c_cc array to the value of _POSIX_VDISABLE, then we disable
+the corresponding special character.
+
+We call these the special input characters, but two of the characters,
+STOP and START (Control-S and Control-Q), are also handled specially when
+output. Note that when recognized by the terminal driver and processed
+specially, most of these special characters are then discarded: they are
+not returned to the process in a read operation. The exceptions to this
+are the newline characters (NL, EOL, EOL2) and the carriage return (CR).
+
+Another "character" that we need to define for terminal devices is the
+BREAK character. BREAK is not really a character, but rather a condition
+that occurs during asynchronous serial data transmission. A BREAK condition
+is signaled to the device driver in various ways, depending on the serial
+interface.
+
+Most old serial terminals have a key labeled BREAK that generates the
+BREAK condition, which is way most people think of BREAK as a character.
+Some newer terminal keyboards don't have a BREAK key. On PCs, the break
+key might be mapped for other purpose. For example, the Windows command
+interpreter can be interrupted by typing Control-BREAK.
+
+For asynchronous serial data transmission, a BREAK is a sequence of
+zero-valued bits that that continues for longer than the time required to
+send one byte. The entire sequence of zero-valued bits is condiered a single
+BREAK. In Section 18.8, we'll see how to send a BREAK with the tcsendbreak()
+function.

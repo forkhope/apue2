@@ -1,0 +1,34 @@
+To get and set a termios structure, we call two functions: tcgetattr() and
+tcsetattr(). This is how we examine and modify the various option flags and
+special characters to make the terminal operate the way we want it to.
+
+#include <termios.h>
+int tcgetattr(int fd, struct termios *termptr);
+int tcsetattr(int fd, int opt, const struct termios *termptr);
+
+Both functions take a pointer to a termios structure and either return the
+current terminal attributes or set the terminal's attributes. Since these
+two functions operate only on terminal devices, errno is set to ENOTTY and
+-1 is returned if fd does not refer to a terminal device.
+
+The argument opt for tcsetattr() lets us specify when we want the new
+terminal attributes to take effect. This argument is specified as one of
+the following constants.
+TCSANOW:   The change occurs immediately.
+TCSADRAIN: The change occurs after all output has been transmitted. This
+           option should be used if we are changing the output parameters.
+TCSAFLUSH: The change occurs after all output has been transmitted.
+           Furthermore, when the change takes place, all input data that
+           has not been read is discarded (flushed).
+           man tcsetattr手册中对该选项的描述为:
+           The change occurs after all output written to the object referred
+           by fd has been transmitted, and all input that has been received
+           but not read will be discarded before the change is made.
+
+The return status of tcsetattr() confuses the programming. This function
+returns OK if it was able to perform any of the requested actions, even if
+it couldn't perform all the requested actions. If the function returns OK,
+it is our responsibility to see whether all the requested actions were
+performed. This means that after we call tcsetattr() to set the desired
+attributes, we need to call tcgetattr() and compare the actual terminal's
+attributes to the desired attributes to detect any differences.

@@ -1,0 +1,4 @@
+Daemons are processes that live for a long time. They are often started
+when the system is bootstrapped and terminate only when the system is shut
+down. Because they don't have a controlling terminal, we say that they run
+int the background.

@@ -30,7 +30,7 @@ static void pr_ids(char *name)
  * stopped be sent the hang-up signal (SIGHUP) followed by the continue
  * signal (SIGCONT). The default action for the hang-up signal is to
  * terminate the process. If we don't want this, we have to provide a signal
- * handler to catch the signal. 如该程序中所作的这样.
+ * handler to catch the signal. 如该程序中所做的这样.
  */
 int main(void)
 {

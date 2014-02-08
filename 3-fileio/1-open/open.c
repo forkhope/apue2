@@ -37,9 +37,24 @@ int main(void)
 	 */
 	if ((fd = open(pathname, O_WRONLY | O_CREAT, 0644)) < 0)
 		err_sys("open: can't create a new file");
-	else 
+	else {
 		printf("open: create file new.txt SUCCESS\n");
-	close(fd);
+        close(fd);
+    }
+
+    /* 虽然指定 O_CREAT 标志位可以新建文件,但是如果所指定路径名包含不存在
+     * 目录项时,这个目录项不会被自动创建,而且新建文件会失败.错误码是ENOENT
+     * 对应的错误字符串是: No such file or directory.查看 man 2 open 手册
+     * 对该错误码描述为: ENOENT: O_CREAT is not set and the named file
+     * does not exist. Or, a directory component in pathname does not
+     * exist or is a dangling symbolic link.
+     */
+    if ((fd = open("test/a.txt", O_WRONLY | O_CREAT, 0644)) < 0)
+		perror("open: can't create the new file: test/a.txt");
+	else {
+		printf("open: create file new.txt SUCCESS\n");
+        close(fd);
+    }
 
 	/* 没有指定open()函数的三个基本模式之一,可以编译通过,但调用write()
 	 * 函数会报错.奇怪的是,调用read()不会报错,如果文件有内容,可以正常读出,
