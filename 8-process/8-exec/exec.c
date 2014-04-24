@@ -23,7 +23,16 @@ char *env_list[] = {"USER=unknown", "PATH=/tmp", NULL};
  * int execvp(const char *filename, char *const argv[]);
  *         All six return: -1 on error, no return on success
  *
- * 下面的程序描述的是 execl 类型的函数, exev 类型的函数和 execl 类似.
+ * 下面的程序描述的是 execl 类型的函数, exev 类型的函数和 execl 类似.但要
+ * 注意, exev 类型函数的 argv[] 数组必须以NULL结尾.
+ * 另外,对于 exel 类型函数,书中给出的参数列表的最后一个参数是是(char *)0,
+ * 但man手册是写成(char *)NULL.目前看来,写成(char *)NULL比(char *)0要好.
+ *
+ * 对于 execl(), execlp(), execle() 的参数列表的最后一个参数,man手册描述为:
+ * The list of arguments must be terminated by a NULL pointer, and, since
+ * these are variadic functions, this pointer must be cast (char *)NULL.
+ * 对于 execv(), execvp(), execve() 的参数数组的最后一个元素,man手册描述为:
+ * The array of pointers must be terminated by a NULL pointer.
  */
 int main(void)
 {
